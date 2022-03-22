@@ -1,10 +1,15 @@
 package com.yeb.server.config.security;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.yeb.server.mapper.AdminMapper;
+import com.yeb.server.mapper.AdminRoleMapper;
+import com.yeb.server.mapper.RoleMapper;
 import com.yeb.server.pojo.Admin;
 import com.yeb.server.service.IAdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -26,7 +31,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
-    private IAdminService adminService;
+    private AdminMapper adminMapper;
     @Autowired
     private RestAuthorizationEntryPoint restAuthorizationEntryPoint;
     @Autowired
@@ -35,6 +40,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private CustomFilter customFilter;
     @Autowired
     private CustomUrlDecisionManager customUrlDecisionManager;
+
+    @Autowired
+    RoleMapper roleMapper;
 
 
     @Override
@@ -101,13 +109,20 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Bean
     public UserDetailsService userDetailsService(){
         return username -> {
-            Admin admin = adminService.getAdminByUserName(username);
+            Admin admin = adminMapper.selectOne(new QueryWrapper<Admin>().eq("username",username).eq("enabled",true));
             if(admin != null){
-                admin.setRoles(adminService.getRoles(admin.getId()));
+                admin.setRoles(roleMapper.getRoles(admin.getId()));
                 return admin;
             }
             throw new UsernameNotFoundException("用户名或密码不正确！");
         };
+    }
+
+
+    @Bean
+    @Override
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
     }
 
     @Bean
